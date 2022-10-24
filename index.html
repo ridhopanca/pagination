@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagination</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <style>
+        .pagination_new .pagination_counter a{
+            color: black;
+            text-align: center;
+            padding: 10px 2px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .pagination_new .pagination_click a{
+            color: black;
+            text-align: center;
+            padding: 10px 6px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .pagination_new .pagination_click {
+            margin-left:20px;
+        }
+
+        #customers {
+            font-family: Arial, Helvetica, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+            margin-top:80px;
+        }
+        
+        #customers td, #customers th {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        
+        #customers tr:nth-child(even){background-color: #f2f2f2;}
+        
+        #customers tr:hover {background-color: #ddd;}
+        
+        #customers th {
+            padding-top: 12px;
+            padding-bottom: 12px;
+            text-align: left;
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h2>User Details </h2>
+    <form method="POST" action=".">
+        <div class="pull-right pagination_new" style="display:flex;float:right;">
+            <div class="pagination_counter">
+                <a style="cursor: alias;" id="prev_count">0</a>
+                <a style="cursor: alias;">-</a>
+                <a style="cursor: alias;" id="next_count">0</a>
+                <a style="cursor: alias;">of</a>
+                <a style="cursor: alias;" id="total_count">0</a>
+                <input type="hidden" id="page" name="page" value="1">
+            </div>
+            <div class="pagination_click">
+                <a href="#" class="pagination_prev">Prev</a>
+                <a href="#" class="pagination_next">Next</a>
+            </div>
+        </div>
+    </form>
+    <table id="customers">
+        <thead>
+        <tr>
+        <th>id</th>
+        <th>grade</th>
+        <th>branch</th>
+        <th>gender</th>
+        <th>race</th>
+        <th>rank</th>
+        </tr>
+        </thead>
+        <tbody class="display_data"></div>
+        </tbody>
+    </table>
+
+    <script>
+        let lastData;
+        // showing data           
+        function table_data(data){
+            var template = "";
+            var lastIteration = parseInt(data.length) - 1; 
+            for(i=0; i<data.length; i++ ){
+                if(lastIteration == i) lastData = data[lastIteration].id;
+                template += `<tr>
+                        <td>${data[i].id}</td>
+                        <td>${data[i].grade}</td>
+                        <td>${data[i].branch}</td>
+                        <td>${data[i].gender}</td>
+                        <td>${data[i].race}</td>
+                        <td>${data[i].rank}</td>
+                    </tr>`
+            }
+            return template;
+        }
+
+        // ajax call for fetch the data from backend
+        function ajax_call(page = 1,type = null, pageSize = 50){
+            var element = {};
+            element.page = page;
+            element.type = type;
+            element.pageSize = pageSize;
+            if(lastData) element.lastSeek = lastData;
+            var url = "http://localhost/pagination/army.php?function=get_army"  
+            $.ajax({
+                type:"POST",
+                url:url,
+                dataType: 'JSON',
+                data:element,
+                success:function(resp){
+                    var data = resp.data;
+                    var total =  resp.total;
+                    var prev = resp.prev;
+                    var next = resp.next;
+                    $("#next_count").html(numberWithCommas(next))
+                    $("#prev_count").html(numberWithCommas(prev))
+                    $("#total_count").html(numberWithCommas(total))
+                    $(".display_data").html(table_data(data))
+                    var total_count = parseInt($("#total_count").html())
+                    if (next_count > total_count){
+                        $("#next_count").html(total_count)
+                        $(".pagination_next").prop( "disabled", false );
+                    }
+                }
+            });    
+            return true
+        }
+
+        // first time calling when you open the page
+        $( document ).ready(function() {
+            var prev_count = $("#prev_count").html()
+            var next_count = $("#next_count").html()
+            ajax_call()
+
+        });
+
+        // click next button
+        $(".pagination_next").click(function() {
+            var prev_count = $("#prev_count").html()
+            var next_count = $("#next_count").html()
+            var total_count = $("#total_count").html()
+                prev_count = parseInt(prev_count.replace(/\./g,''))
+                total_count = parseInt(total_count.replace(/\./g,''))
+                next_count = parseInt(next_count.replace(/\./g,''))
+            if (next_count == total_count){
+                $("#next_count").html(next_count)
+                $(".pagination_next").prop( "disabled", true );
+            return false;
+            }
+            var pages = $('#page').val();
+            pages = parseInt(pages) + 1;
+            $('#page').val(pages);
+            ajax_call(pages,'next')
+        });
+
+        // click next button
+        $(".pagination_prev").click(function() {
+            var prev_count = $("#prev_count").html()
+                prev_count = parseInt(prev_count.replace(/\./g,''))
+            if (prev_count == 1 || prev_count == 0){
+                $(".pagination_prev").prop( "disabled", true );
+                return false;
+            }
+            var pages = $('#page').val();
+            pages = parseInt(pages) - 1;
+            pages = parseInt(pages) > 1 ? pages : 1;
+            $('#page').val(pages);
+            ajax_call(pages,'prev')
+
+        });
+
+        function numberWithCommas(x) {
+            return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+    </script>
+</body>
+</html>
